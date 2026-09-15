@@ -1,0 +1,75 @@
+{
+  "project": "DIAS",
+  "map_id": "DIAS_JUPITER_PJ7_GMI_V1",
+  "dataset": "NASA/JPL PDS JunoCam PJ7 Global Map Image",
+  "source_product_label_url": "https://planetarydata.jpl.nasa.gov/img/data/juno/JNOJNC_0014/DATA/GLOBAL_MAPS/JNCR_2017192_07P00000_V02.LBL",
+  "source_product_image_url": "https://planetarydata.jpl.nasa.gov/img/data/juno/JNOJNC_0014/DATA/GLOBAL_MAPS/JNCR_2017192_07P00000_V02.IMG",
+  "source_volume": "JNOJNC_0014/",
+  "source_projection": "SIMPLE CYLINDRICAL",
+  "source_latitude_type": "planetographic",
+  "source_longitude_direction": "west",
+  "source_center_longitude_deg": 0.0,
+  "source_pixels_per_degree": 16.0,
+  "source_reference_axes_km": {
+    "a": 71492.0,
+    "c": 66854.0,
+    "note": "PDS JunoCam cartographic source axes; visual basemap only."
+  },
+  "dias_metric_reference": {
+    "surface": "Juno-2026 physical 1-bar central estimate",
+    "a_km": 71488.0,
+    "c_km": 66842.0,
+    "e2": 0.12575616596839234,
+    "equator_to_pole_GD": 799.0,
+    "pole_to_pole_GD": 1598.0,
+    "meters_per_GD": 136013.477992058
+  },
+  "ea": {
+    "equator_V": 400.5,
+    "horizontal_period": 1260.0,
+    "H0_system_III_w_deg": 60.0
+  },
+  "canonical_omphalos": {
+    "name": "Pantoptis Ophthalmos / Great Red Spot",
+    "epoch": "PJ7, 2017-07-11",
+    "system_III_w_deg": 60.0,
+    "planetographic_lat_deg": -22.610918118371206,
+    "planetocentric_lat_deg": -20.006972747,
+    "south_offset_from_nominal_PJ7_center_km": 8.63651
+  },
+  "web_map": {
+    "projection": "Simple Cylindrical / equirectangular",
+    "latitude_type": "planetographic",
+    "longitude_direction": "positive west",
+    "centre_system_III_w_deg": 60.0,
+    "centre_is_H0": true,
+    "relative_longitude_domain_deg": [
+      -180,
+      180
+    ],
+    "latitude_domain_deg": [
+      -90,
+      90
+    ],
+    "web_pixels": [
+      16384,
+      8192
+    ],
+    "tile_size": 256,
+    "zoom_min": 0,
+    "zoom_max": 5,
+    "zoom_0_matrix": [
+      2,
+      1
+    ],
+    "zoom_5_matrix": [
+      64,
+      32
+    ],
+    "total_tiles": 2730,
+    "webp_quality": 86,
+    "source_roll_pixels": -960
+  },
+  "metric_note": "The raster is a visual/cartographic basemap. All DIAS distances in GΔ must be computed on the locked Juno-2026 1-bar spheroid, not in flat-map pixels.",
+  "credit": "NASA/JPL-Caltech/SwRI/MSSS; Planetary Data System; DIAS map tiling workflow."
+}
