@@ -103,7 +103,12 @@ jobs:
           img = get(img_url).content
 
           (OUT / "source.LBL").write_bytes(lbl)
-          (OUT / "source.IMG").write_bytes(img)
+
+          # IMPORTANT:
+          # The PDS3 label points to the ORIGINAL .IMG basename.
+          # GDAL resolves that pointer relative to source.LBL, so the image
+          # must be saved beside the label with exactly that original name.
+          (OUT / img_name).write_bytes(img)
 
           # Preserve original filenames as metadata.
           (OUT / "source_urls.txt").write_text(
@@ -113,6 +118,7 @@ jobs:
 
           print("LBL bytes:", len(lbl))
           print("IMG bytes:", len(img))
+          print("Saved IMG as:", OUT / img_name)
           PY
 
           python /tmp/download_pj7_gmi.py
