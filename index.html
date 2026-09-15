@@ -1,0 +1,1922 @@
+<!doctype html>
+<html lang="el">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>ZEUS · EA24 → GΔ</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+  <style>
+    :root{
+      --panel:#f4f4f2f2;
+      --panel-border:#c9cecf;
+      --text:#25292b;
+      --muted:#70787b;
+      --button:#aab1b3;
+      --button-dark:#8d9699;
+      --accent:#1f6f9d;
+      --omphalos:#ffd21f;
+      --reflector:#55a6d9;
+      --holdout:#9b7bd6;
+    }
+
+    *{box-sizing:border-box}
+
+    html,body{
+      margin:0;
+      width:100%;
+      height:100%;
+      overflow:hidden;
+      background:#090b0d;
+      color:var(--text);
+      font-family:Arial,Helvetica,sans-serif;
+    }
+
+    #map{
+      position:absolute;
+      inset:0;
+      background:#090b0d;
+    }
+
+    .top-help{
+      position:absolute;
+      z-index:700;
+      left:50%;
+      top:10px;
+      transform:translateX(-50%);
+      padding:7px 14px;
+      border-radius:18px;
+      background:#7f8583b8;
+      color:#fff;
+      font-size:13px;
+      letter-spacing:.2px;
+      pointer-events:none;
+      white-space:nowrap;
+    }
+
+    .ea-status{
+      position:absolute;
+      z-index:700;
+      left:10px;
+      top:10px;
+      padding:7px 10px;
+      border-radius:9px;
+      background:#f5f5f2ee;
+      box-shadow:0 2px 9px #0004;
+      font-size:12px;
+      color:#4d5355;
+      pointer-events:none;
+    }
+
+    .slot-control{
+      position:absolute;
+      z-index:710;
+      left:10px;
+      top:50px;
+      display:flex;
+      gap:6px;
+    }
+
+    .slot-control button{
+      width:42px;
+      height:34px;
+      border:1px solid #c6cacc;
+      border-radius:9px;
+      background:#f7f7f5ef;
+      font-weight:700;
+      font-size:14px;
+      cursor:pointer;
+      box-shadow:0 2px 9px #0003;
+    }
+
+    .slot-control button.active{
+      background:#343b3e;
+      color:#fff;
+      border-color:#343b3e;
+    }
+
+    .panel{
+      position:absolute;
+      z-index:750;
+      left:10px;
+      right:10px;
+      bottom:10px;
+      border:1px solid var(--panel-border);
+      border-radius:15px;
+      background:var(--panel);
+      box-shadow:0 6px 26px #0004;
+      padding:12px;
+      backdrop-filter:blur(5px);
+    }
+
+    .panel-title{
+      font-size:17px;
+      font-weight:700;
+      letter-spacing:.4px;
+      margin:0 0 9px 2px;
+    }
+
+    .points{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:9px;
+    }
+
+    .point-card{
+      min-height:108px;
+      border:1px solid #c8cecf;
+      border-radius:11px;
+      background:#fafaf8c9;
+      padding:10px;
+    }
+
+    .point-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+      margin-bottom:7px;
+    }
+
+    .point-name{
+      font-weight:700;
+      font-size:14px;
+      letter-spacing:.5px;
+    }
+
+    .small-button{
+      border:1px solid #c8cecf;
+      border-radius:9px;
+      background:#f5f6f4;
+      padding:6px 8px;
+      font-size:11px;
+      font-weight:700;
+      cursor:pointer;
+    }
+
+    .codes{
+      font-family:"Courier New",monospace;
+      font-size:12px;
+      line-height:1.65;
+      color:#555d60;
+      overflow-wrap:anywhere;
+    }
+
+    .point-source{
+      margin-top:4px;
+      font-size:11px;
+      color:#7b8386;
+      min-height:14px;
+    }
+
+    .actions-row{
+      display:grid;
+      grid-template-columns:1fr auto;
+      gap:9px;
+      margin-top:10px;
+    }
+
+    .main-button{
+      border:0;
+      border-radius:10px;
+      padding:11px 12px;
+      background:var(--button);
+      color:#fff;
+      font-weight:700;
+      font-size:13px;
+      cursor:pointer;
+    }
+
+    .main-button:hover{background:var(--button-dark)}
+
+    .clear-button{
+      border:0;
+      border-radius:10px;
+      padding:11px 14px;
+      background:#e6e8e6;
+      color:#32383a;
+      font-weight:700;
+      font-size:12px;
+      cursor:pointer;
+    }
+
+    .result{
+      display:none;
+      margin-top:9px;
+      border-top:1px solid #d1d5d5;
+      padding-top:9px;
+      font-size:13px;
+    }
+
+    .result strong{font-size:15px}
+
+    .converter-button{
+      display:none;
+      width:100%;
+      margin-top:8px;
+      border:0;
+      border-radius:10px;
+      padding:10px;
+      background:#d9dddc;
+      color:#333a3c;
+      font-weight:700;
+      cursor:pointer;
+    }
+
+    .converter-result{
+      display:none;
+      margin-top:7px;
+      padding:8px 10px;
+      border-radius:9px;
+      background:#ffffffa8;
+      font-size:12px;
+      line-height:1.5;
+    }
+
+    .llr-result{
+      display:none;
+      margin-top:7px;
+      padding:8px 10px;
+      border-left:3px solid #6a9b63;
+      background:#f5faf3;
+      font-size:12px;
+      line-height:1.5;
+    }
+
+    .credit{
+      position:absolute;
+      z-index:720;
+      right:8px;
+      bottom:calc(10px + 275px);
+      padding:4px 7px;
+      border-radius:6px;
+      background:#0c0e0fa8;
+      color:#ddd;
+      font-size:10px;
+      pointer-events:none;
+    }
+
+    .poi-dot{
+      width:18px;
+      height:18px;
+      border-radius:50%;
+      border:2px solid #fff;
+      box-shadow:0 0 0 1px #0008,0 1px 5px #0009;
+    }
+
+    .poi-reflector{background:var(--reflector)}
+    .poi-holdout{background:var(--holdout)}
+    .poi-juno{
+      background:#55a6d9;
+      width:14px;
+      height:14px;
+      border-width:2px;
+    }
+    .beacon-summary{
+      margin-top:7px;
+      padding-top:7px;
+      border-top:1px solid #d7dbdc;
+      font-size:10.5px;
+      line-height:1.45;
+      color:#555d60;
+    }
+    .beacon-pass{
+      font-weight:700;
+      color:#176f43;
+    }
+
+    .poi-omphalos{
+      width:22px;
+      height:22px;
+      border-radius:50%;
+      background:#e53935;
+      border:3px solid var(--omphalos);
+      box-shadow:0 0 0 2px #b82720,0 1px 7px #000b;
+    }
+
+    .selection-marker{
+      width:28px;
+      height:28px;
+      border-radius:50%;
+      background:#f5f5f3;
+      border:2px solid #25292b;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:700;
+      font-size:14px;
+      box-shadow:0 2px 8px #0008;
+    }
+
+    .leaflet-popup-content-wrapper{
+      border-radius:10px;
+    }
+
+    .leaflet-popup-content{
+      margin:12px 14px;
+      min-width:245px;
+      font-size:12px;
+      line-height:1.45;
+    }
+
+    .popup-title{
+      font-weight:700;
+      font-size:14px;
+      margin-bottom:5px;
+    }
+
+    .popup-ea{
+      margin-top:7px;
+      font-family:"Courier New",monospace;
+      font-size:11px;
+      overflow-wrap:anywhere;
+    }
+
+    .popup-actions{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:6px;
+      margin-top:9px;
+    }
+
+    .popup-actions button{
+      border:1px solid #bdc4c6;
+      border-radius:7px;
+      background:#f1f2f0;
+      padding:7px 5px;
+      font-weight:700;
+      font-size:10px;
+      cursor:pointer;
+    }
+
+
+    .ea-tap-popup{
+      min-width:260px;
+      color:#25292b;
+    }
+
+    .ea-tap-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:9px;
+      padding-bottom:7px;
+      border-bottom:1px solid #d4d8d9;
+    }
+
+    .ea-tap-title{
+      font-weight:700;
+      font-size:13px;
+      letter-spacing:.4px;
+    }
+
+    .ea-tap-tools{
+      display:flex;
+      gap:5px;
+    }
+
+    .ea-tap-tool{
+      width:31px;
+      height:29px;
+      border:1px solid #c3c9ca;
+      border-radius:7px;
+      background:#f4f5f3;
+      color:#25292b;
+      font-size:17px;
+      line-height:1;
+      cursor:pointer;
+    }
+
+    .ea-tap-tool:active{
+      transform:translateY(1px);
+    }
+
+    .ea-tap-row{
+      display:grid;
+      grid-template-columns:42px 1fr;
+      gap:7px;
+      align-items:start;
+      margin:5px 0;
+    }
+
+    .ea-tap-key{
+      font-weight:700;
+      font-size:11px;
+      color:#697174;
+    }
+
+    .ea-tap-code{
+      font-family:"Courier New",monospace;
+      font-size:11px;
+      line-height:1.45;
+      overflow-wrap:anywhere;
+      user-select:text;
+    }
+
+    .ea-tap-conventional{
+      margin-top:8px;
+      padding-top:7px;
+      border-top:1px solid #e0e3e3;
+      color:#747c7f;
+      font-size:10.5px;
+    }
+
+    .distance-line{
+      stroke:#f3f3f1;
+      stroke-width:3;
+      stroke-opacity:.92;
+      filter:drop-shadow(0 1px 2px #000);
+    }
+
+    .distance-label-icon{
+      background:transparent;
+      border:0;
+    }
+
+    .distance-badge{
+      display:inline-block;
+      transform:translate(-50%,-50%);
+      white-space:nowrap;
+      padding:5px 9px;
+      border:1px solid #d9dedd;
+      border-radius:12px;
+      background:#f5f5f2f2;
+      color:#25292b;
+      box-shadow:0 2px 8px #0006;
+      font-size:11px;
+      font-weight:700;
+      letter-spacing:.15px;
+      pointer-events:none;
+    }
+
+    @media(max-width:700px){
+      .panel{padding:9px}
+      .panel-title{font-size:15px}
+      .points{gap:7px}
+      .point-card{padding:8px;min-height:102px}
+      .codes{font-size:10.7px}
+      .small-button{font-size:10px;padding:5px 6px}
+      .top-help{font-size:11px;max-width:65vw;overflow:hidden;text-overflow:ellipsis}
+      .credit{bottom:calc(10px + 267px)}
+      .leaflet-popup-content{min-width:220px}
+    }
+
+    @media(max-width:480px){
+      .panel{left:6px;right:6px;bottom:6px}
+      .actions-row{grid-template-columns:1fr}
+      .clear-button{padding:9px}
+      .credit{display:none}
+    }
+  </style>
+</head>
+
+<body>
+  <div id="map"></div>
+
+  <div class="ea-status" id="eaStatus">EA · z0</div>
+  <div class="top-help">κλικ / ταπ για EA24 · γαλάζιοι φάροι = ΗΡΑ/Juno · σύρε / pinch / wheel</div>
+
+  <div class="slot-control">
+    <button id="slotA" class="active" type="button">Α</button>
+    <button id="slotB" type="button">Β</button>
+  </div>
+
+  <div class="credit">© NASA/JPL/SSI · PDS Atmospheres</div>
+
+  <section class="panel">
+    <div class="panel-title">ZEUS · EA24 → GΔ</div>
+
+    <div class="points">
+      <div class="point-card">
+        <div class="point-head">
+          <div class="point-name">ΣΤΙΓΜΑ Α</div>
+          <button class="small-button" type="button" id="clearA">ΚΑΘΑΡΙΣΜΟΣ Α</button>
+        </div>
+        <div class="codes" id="codesA">V24=…<br>H24=…</div>
+        <div class="point-source" id="sourceA"></div>
+      </div>
+
+      <div class="point-card">
+        <div class="point-head">
+          <div class="point-name">ΣΤΙΓΜΑ Β</div>
+          <button class="small-button" type="button" id="clearB">ΚΑΘΑΡΙΣΜΟΣ Β</button>
+        </div>
+        <div class="codes" id="codesB">V24=…<br>H24=…</div>
+        <div class="point-source" id="sourceB"></div>
+      </div>
+    </div>
+
+    <div class="actions-row">
+      <button class="main-button" type="button" id="distanceButton">ΥΠΟΛΟΓΙΣΜΟΣ ΑΠΟΣΤΑΣΗΣ</button>
+      <button class="clear-button" type="button" id="clearAll">ΚΑΘΑΡΙΣΜΟΣ ΟΛΩΝ</button>
+    </div>
+
+    <div class="result" id="result"></div>
+
+    <button class="converter-button" type="button" id="converterButton">
+      ΜΕΤΑΤΡΟΠΗ ΤΩΝ GΔ ΣΕ ΜΕΤΡΑ
+    </button>
+
+    <div class="converter-result" id="converterResult"></div>
+    <div class="llr-result" id="llrResult"></div>
+  </section>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://geographiclib.sourceforge.io/scripts/geographiclib-geodesic.min.js"></script>
+  <script>
+
+  "use strict";
+
+  // ============================================================
+  // 1. Κλειδωμένος πυρήνας ΔΙΑΣ / Δίας
+  // ============================================================
+
+  const CORE_ID = "DIAS_JUPITER_HTML_V3_1_BEACONS_GEODESIC_FIX_2026-09-15";
+  const LEVELS = 24;
+
+  const JUPITER_A_M = 71488.0 * 1000.0;
+  const JUPITER_C_M = 66842.0 * 1000.0;
+  const JUPITER_F = 1.0 - JUPITER_C_M / JUPITER_A_M;
+  const JUPITER_E2 = 1.0 - (JUPITER_C_M / JUPITER_A_M) ** 2;
+
+  const POLE_TO_POLE_GD = 1598.0;
+  const QUARTER_MERIDIAN_GD = 799.0;
+
+  const H_ORIGIN_W_DEG = 60.0;
+  const PANTOPTIS_PC_LAT_DEG = -20.0;
+  const PANTOPTIS_W_DEG = 60.0;
+  const OMPHALOS_SOUTH_OFFSET_KM = 0.0;
+
+  const DIAS_SIMPLE_IONIAN = 215.0;
+  const IONIAN_ALPHABET_TOTAL = 4995.0;
+  const DIAS_NAME_VALUE = 2237.0;
+
+  function wrap180(x){
+    x=((x+180)%360+360)%360-180;
+    return x===-180 ? 180 : x;
+  }
+
+  function normalizeWest(w){
+    return ((w%360)+360)%360;
+  }
+
+  function planetocentricToPlanetographic(pcDeg){
+    if (Math.abs(Math.abs(pcDeg)-90)<1e-14) return Math.sign(pcDeg)*90;
+    const t=Math.tan(pcDeg*Math.PI/180);
+    return Math.atan((JUPITER_A_M*JUPITER_A_M)/(JUPITER_C_M*JUPITER_C_M)*t)*180/Math.PI;
+  }
+
+  function planetographicToPlanetocentric(pgDeg){
+    if (Math.abs(Math.abs(pgDeg)-90)<1e-14) return Math.sign(pgDeg)*90;
+    const t=Math.tan(pgDeg*Math.PI/180);
+    return Math.atan((JUPITER_C_M*JUPITER_C_M)/(JUPITER_A_M*JUPITER_A_M)*t)*180/Math.PI;
+  }
+
+  function simpson(f,a,b){
+    const c=(a+b)/2;
+    return (b-a)/6*(f(a)+4*f(c)+f(b));
+  }
+
+  function adaptiveSimpson(f,a,b,eps=1e-12,depth=28){
+    if (a===b) return 0;
+    const whole=simpson(f,a,b);
+    function rec(x0,x1,e,s,d){
+      const m=(x0+x1)/2;
+      const l=simpson(f,x0,m);
+      const r=simpson(f,m,x1);
+      const delta=l+r-s;
+      if (d<=0 || Math.abs(delta)<=15*e) return l+r+delta/15;
+      return rec(x0,m,e/2,l,d-1)+rec(m,x1,e/2,r,d-1);
+    }
+    return rec(a,b,eps,whole,depth);
+  }
+
+  function completeEllipticE(m){
+    return adaptiveSimpson(
+      t=>Math.sqrt(1-m*Math.sin(t)**2),
+      0,Math.PI/2,1e-13,30
+    );
+  }
+
+  const QUARTER_MERIDIAN_M = JUPITER_A_M * completeEllipticE(JUPITER_E2);
+  const METERS_PER_GD = QUARTER_MERIDIAN_M / QUARTER_MERIDIAN_GD;
+
+  // ============================================================
+  // 2. Exact rational arithmetic with BigInt
+  // ============================================================
+
+  function bgcd(a,b){
+    a = a < 0n ? -a : a;
+    b = b < 0n ? -b : b;
+    while (b !== 0n){
+      const t = a % b;
+      a = b;
+      b = t;
+    }
+    return a || 1n;
+  }
+
+  class F {
+    constructor(n,d=1n){
+      n = BigInt(n);
+      d = BigInt(d);
+      if (d === 0n) throw new Error("Μηδενικός παρονομαστής.");
+      if (d < 0n){ n = -n; d = -d; }
+      const g = bgcd(n,d);
+      this.n = n/g;
+      this.d = d/g;
+    }
+
+    static o(x){
+      return x instanceof F ? x : new F(BigInt(x),1n);
+    }
+
+    static fromDecimal(s){
+      s = String(s).trim();
+      if (/[eE]/.test(s)){
+        s = Number(s).toFixed(12);
+      }
+      let sign = 1n;
+      if (s.startsWith("-")){
+        sign = -1n;
+        s = s.slice(1);
+      } else if (s.startsWith("+")){
+        s = s.slice(1);
+      }
+
+      const parts = s.split(".");
+      const a = parts[0] || "0";
+      const b = parts[1] || "";
+      const den = 10n ** BigInt(b.length);
+      const num = BigInt(a) * den + BigInt(b || "0");
+      return new F(sign*num, den);
+    }
+
+    add(o){ o=F.o(o); return new F(this.n*o.d + o.n*this.d, this.d*o.d); }
+    sub(o){ o=F.o(o); return new F(this.n*o.d - o.n*this.d, this.d*o.d); }
+    mul(o){ o=F.o(o); return new F(this.n*o.n, this.d*o.d); }
+    div(o){ o=F.o(o); return new F(this.n*o.d, this.d*o.n); }
+    neg(){ return new F(-this.n,this.d); }
+    abs(){ return this.n < 0n ? this.neg() : this; }
+
+    cmp(o){
+      o=F.o(o);
+      const x = this.n*o.d - o.n*this.d;
+      return x < 0n ? -1 : x > 0n ? 1 : 0;
+    }
+
+    eq(o){ return this.cmp(o)===0; }
+    lt(o){ return this.cmp(o)<0; }
+    le(o){ return this.cmp(o)<=0; }
+    gt(o){ return this.cmp(o)>0; }
+    ge(o){ return this.cmp(o)>=0; }
+
+    floor(){
+      let q = this.n / this.d;
+      const r = this.n % this.d;
+      if (this.n < 0n && r !== 0n) q -= 1n;
+      return q;
+    }
+
+    mod(o){
+      o=F.o(o);
+      return this.sub(o.mul(new F(this.div(o).floor(),1n)));
+    }
+
+    toNumber(precision=15){
+      const sign = this.n < 0n ? -1 : 1;
+      const an = this.n < 0n ? -this.n : this.n;
+      const q = an / this.d;
+      const r = an % this.d;
+      const scale = 10n ** BigInt(precision);
+      const frac = (r * scale) / this.d;
+      return sign * (Number(q) + Number(frac) / (10 ** precision));
+    }
+  }
+
+  const P800  = new F(800n);
+  const P1260 = new F(1260n);
+  const EQUATOR_V = new F(801n,2n); // 400.5
+
+  const IONIAN_RAW = {
+    "Α":1,"Β":2,"Γ":3,"Δ":4,"Ε":5,"Ζ":7,"Η":8,"Θ":9,
+    "Ι":10,"Κ":20,"Λ":30,"Μ":40,"Ν":50,"Ξ":60,"Ο":70,"Π":80,
+    "Ρ":100,"Σ":200,"Τ":300,"Υ":400,"Φ":500,"Χ":600,"Ψ":700,"Ω":800
+  };
+
+  const NAMES_RAW = {
+    "Α":532,"Β":311,"Γ":85,"Δ":340,"Ε":865,"Ζ":316,"Η":309,"Θ":318,
+    "Ι":1111,"Κ":182,"Λ":76,"Μ":50,"Ν":60,"Ξ":70,"Ο":360,"Π":90,
+    "Ρ":170,"Σ":254,"Τ":701,"Υ":1260,"Φ":510,"Χ":610,"Ψ":710,"Ω":849
+  };
+
+  function mapF(o){
+    const r={};
+    for (const [k,v] of Object.entries(o)) r[k]=new F(BigInt(v));
+    return r;
+  }
+
+  const IONIAN = mapF(IONIAN_RAW);
+  const NAMES = mapF(NAMES_RAW);
+
+  function fmin(a,b){ return a.le(b) ? a : b; }
+  function fmax(a,b){ return a.ge(b) ? a : b; }
+
+  function circularDistanceFraction(a,b,p){
+    const d = a.sub(b).abs().mod(p);
+    const other = p.sub(d);
+    return d.le(other) ? d : other;
+  }
+
+
+  // ============================================================
+  // 3. Exact EA24 encoder
+  // ============================================================
+
+  function linearZoneFraction(x, anchors){
+    const items = Object.entries(anchors).sort((a,b)=>a[1].cmp(b[1]));
+    const ds = items.map(([,v])=>x.sub(v).abs());
+    const m = ds.reduce((a,b)=>a.le(b)?a:b);
+    const tied = ds.map((d,i)=>d.eq(m)?i:-1).filter(i=>i>=0);
+
+    if (tied.length !== 1) throw new Error("ExactMidpointTie: linear");
+
+    const i = tied[0];
+    const [letter,value] = items[i];
+    const vals = items.map(x=>x[1]);
+    const lo = i===0 ? vals[0] : vals[i-1].add(value).div(2);
+    const hi = i===items.length-1 ? vals.at(-1) : value.add(vals[i+1]).div(2);
+
+    return {letter,value,lo,hi};
+  }
+
+  function circularZoneFraction(phase, anchors, period, rotation){
+    phase = phase.mod(period);
+
+    const pts = Object.entries(anchors)
+      .map(([ch,value])=>({
+        q:value.sub(rotation).mod(period),
+        ch,
+        value
+      }))
+      .sort((a,b)=>a.q.cmp(b.q));
+
+    const ds = pts.map(o=>circularDistanceFraction(phase,o.q,period));
+    const m = ds.reduce((a,b)=>a.le(b)?a:b);
+    const tied = ds.map((d,i)=>d.eq(m)?i:-1).filter(i=>i>=0);
+
+    if (tied.length !== 1) throw new Error("ExactMidpointTie: circular");
+
+    const i = tied[0];
+    const pt = pts[i];
+    const prev = i>0 ? pts[i-1].q : pts.at(-1).q.sub(period);
+    const next = i<pts.length-1 ? pts[i+1].q : pts[0].q.add(period);
+    const lo = prev.add(pt.q).div(2);
+    const hi = pt.q.add(next).div(2);
+
+    let u = phase;
+    while (u.lt(lo)) u = u.add(period);
+    while (u.ge(hi)) u = u.sub(period);
+
+    return {letter:pt.ch,value:pt.value,lo,hi,u};
+  }
+
+  function encodeEACenterExact(vCenter,hCenter){
+    const physical = {...IONIAN, "Υ":EQUATOR_V};
+
+    let z = linearZoneFraction(vCenter,physical);
+    let vCode = z.letter;
+    let phase = P800.mul(z.hi.sub(vCenter)).div(z.hi.sub(z.lo));
+    let rotation = IONIAN[z.letter];
+
+    for (let i=2;i<=LEVELS;i++){
+      z = circularZoneFraction(phase,IONIAN,P800,rotation);
+      vCode += z.letter;
+      phase = P800.mul(z.hi.sub(z.u)).div(z.hi.sub(z.lo));
+      rotation = IONIAN[z.letter];
+    }
+
+    phase = hCenter.mod(P1260);
+    z = circularZoneFraction(phase,NAMES,P1260,new F(0n));
+    let hCode = z.letter;
+    phase = P1260.mul(z.hi.sub(z.u)).div(z.hi.sub(z.lo));
+    rotation = z.value;
+
+    for (let i=2;i<=LEVELS;i++){
+      z = circularZoneFraction(phase,NAMES,P1260,rotation);
+      hCode += z.letter;
+      phase = P1260.mul(z.hi.sub(z.u)).div(z.hi.sub(z.lo));
+      rotation = z.value;
+    }
+
+    return {V24:vCode,H24:hCode};
+  }
+
+  function coordToEA24(pcLatDeg,westDeg){
+    const lat = F.fromDecimal(Number(pcLatDeg).toFixed(12));
+    const west = F.fromDecimal(Number(westDeg).toFixed(12));
+
+    const v = new F(1n)
+      .add(new F(799n).mul(lat.add(90)).div(180));
+
+    const h = P1260
+      .mul(west.sub(H_ORIGIN_W_DEG).mod(new F(360n)))
+      .div(360);
+
+    return encodeEACenterExact(v,h);
+  }
+
+  // ============================================================
+  // 4. Exact EA24 inverse reconstruction
+  // ============================================================
+
+  function mergeIntervals(intervals){
+    const items = intervals.slice().sort((a,b)=>a[0].cmp(b[0]));
+    if (!items.length) return [];
+
+    const out = [[items[0][0],items[0][1]]];
+
+    for (let i=1;i<items.length;i++){
+      const [lo,hi] = items[i];
+      const last = out[out.length-1];
+
+      if (lo.le(last[1])){
+        if (hi.gt(last[1])) last[1]=hi;
+      } else {
+        out.push([lo,hi]);
+      }
+    }
+
+    return out;
+  }
+
+  function linearBounds(letter,anchors){
+    const items = Object.entries(anchors).sort((a,b)=>a[1].cmp(b[1]));
+    const i = items.findIndex(([ch])=>ch===letter);
+    const value = items[i][1];
+    const vals = items.map(x=>x[1]);
+
+    const lo = i===0 ? vals[0] : vals[i-1].add(value).div(2);
+    const hi = i===items.length-1 ? vals.at(-1) : value.add(vals[i+1]).div(2);
+
+    return [lo,hi];
+  }
+
+  function circularBounds(letter,anchors,period,rotation){
+    const pts = Object.entries(anchors)
+      .map(([ch,value])=>({
+        q:value.sub(rotation).mod(period),
+        ch,
+        value
+      }))
+      .sort((a,b)=>a.q.cmp(b.q));
+
+    const i = pts.findIndex(o=>o.ch===letter);
+    const q = pts[i].q;
+    const prev = i>0 ? pts[i-1].q : pts.at(-1).q.sub(period);
+    const next = i<pts.length-1 ? pts[i+1].q : pts[0].q.add(period);
+
+    return [prev.add(q).div(2),q.add(next).div(2)];
+  }
+
+  function rawIntervalsFromUnwrapped(lo,hi,period){
+    const out=[];
+    const k0 = lo.div(period).floor()-2n;
+    const k1 = hi.div(period).floor()+2n;
+
+    for (let k=k0;k<=k1;k++){
+      const kk = new F(k);
+      const a = fmax(new F(0n),lo.sub(period.mul(kk)));
+      const b = fmin(period,hi.sub(period.mul(kk)));
+      if (b.gt(a)) out.push([a,b]);
+    }
+
+    return mergeIntervals(out);
+  }
+
+  function backStep(nextRaw,lo,hi,period){
+    const width = hi.sub(lo);
+    const out=[];
+
+    for (const [a,b] of nextRaw){
+      const pLo = hi.sub(b.div(period).mul(width));
+      const pHi = hi.sub(a.div(period).mul(width));
+      out.push(...rawIntervalsFromUnwrapped(pLo,pHi,period));
+    }
+
+    return mergeIntervals(out);
+  }
+
+  function inverseVerticalCell(code){
+    const physical={...IONIAN,"Υ":EQUATOR_V};
+    const zones=[linearBounds(code[0],physical)];
+
+    for (let i=1;i<code.length;i++){
+      zones.push(
+        circularBounds(code[i],IONIAN,P800,IONIAN[code[i-1]])
+      );
+    }
+
+    let current = rawIntervalsFromUnwrapped(
+      zones.at(-1)[0],zones.at(-1)[1],P800
+    );
+
+    for (let idx=code.length-2;idx>0;idx--){
+      current = backStep(current,zones[idx][0],zones[idx][1],P800);
+    }
+
+    const [lo,hi]=zones[0];
+    const width=hi.sub(lo);
+    const out=[];
+
+    for (const [a,b] of current){
+      const xLo=hi.sub(b.div(P800).mul(width));
+      const xHi=hi.sub(a.div(P800).mul(width));
+      out.push([xLo,xHi]);
+    }
+
+    return mergeIntervals(out);
+  }
+
+  function inverseHorizontalCell(code){
+    const zones=[
+      circularBounds(code[0],NAMES,P1260,new F(0n))
+    ];
+
+    for (let i=1;i<code.length;i++){
+      zones.push(
+        circularBounds(code[i],NAMES,P1260,NAMES[code[i-1]])
+      );
+    }
+
+    let current = rawIntervalsFromUnwrapped(
+      zones.at(-1)[0],zones.at(-1)[1],P1260
+    );
+
+    for (let idx=code.length-2;idx>=0;idx--){
+      current=backStep(current,zones[idx][0],zones[idx][1],P1260);
+    }
+
+    return mergeIntervals(current);
+  }
+
+  function linearCenterAndWidth(intervals){
+    let lo=intervals[0][0], hi=intervals[0][1];
+
+    for (const [a,b] of intervals){
+      lo=fmin(lo,a);
+      hi=fmax(hi,b);
+    }
+
+    return [lo.add(hi).div(2),hi.sub(lo)];
+  }
+
+  function cyclicCenterAndWidth(intervals,period){
+    if (intervals.length===1){
+      const [lo,hi]=intervals[0];
+      return [lo.add(hi).div(2).mod(period),hi.sub(lo)];
+    }
+
+    if (
+      intervals.length===2 &&
+      intervals[0][0].eq(0) &&
+      intervals[1][1].eq(period)
+    ){
+      const a=intervals[0][1];
+      const b=intervals[1][0];
+      const width=a.add(period.sub(b));
+      const center=b.add(width.div(2)).mod(period);
+      return [center,width];
+    }
+
+    const items=mergeIntervals(intervals);
+    const gaps=[];
+
+    for (let i=0;i<items.length-1;i++){
+      gaps.push([items[i+1][0].sub(items[i][1]),i]);
+    }
+
+    gaps.push([
+      items[0][0].add(period).sub(items.at(-1)[1]),
+      items.length-1
+    ]);
+
+    let best=gaps[0];
+
+    for (const g of gaps.slice(1)){
+      const c=g[0].cmp(best[0]);
+      if (c>0 || (c===0 && g[1]<best[1])) best=g;
+    }
+
+    const width=period.sub(best[0]);
+    const start=items[(best[1]+1)%items.length][0];
+    const center=start.add(width.div(2)).mod(period);
+
+    return [center,width];
+  }
+
+  function decodeEA24(vCode,hCode){
+    const [vCenter] = linearCenterAndWidth(inverseVerticalCell(vCode));
+    const [hCenter] = cyclicCenterAndWidth(
+      inverseHorizontalCell(hCode),P1260
+    );
+
+    const lat = vCenter
+      .sub(1)
+      .mul(180)
+      .div(799)
+      .sub(90)
+      .toNumber(13);
+
+    let west = new F(60)
+      .add(hCenter.div(P1260).mul(360))
+      .toNumber(13);
+
+    west=((west%360)+360)%360;
+
+    return {
+      lat,
+      west,
+      lon:wrap180(west-H_ORIGIN_W_DEG)
+    };
+  }
+
+
+  // ============================================================
+  // 5. Γεωδαιτική απόσταση πάνω στο κλειδωμένο σφαιροειδές
+  // ============================================================
+
+  const JUPITER_GEOD = (() => {
+    try{
+      // GeographicLib browser API:
+      // geodesic.Geodesic is namespace, constructor is geodesic.Geodesic.Geodesic.
+      const GeodesicCtor =
+        window.geodesic &&
+        window.geodesic.Geodesic &&
+        window.geodesic.Geodesic.Geodesic;
+
+      return (typeof GeodesicCtor === "function")
+        ? new GeodesicCtor(JUPITER_A_M,JUPITER_F)
+        : null;
+    }catch(err){
+      // Ποτέ δεν αφήνουμε εξωτερικό CDN/API να σταματήσει τον χάρτη.
+      console.warn("GeographicLib unavailable; χρήση Vincenty fallback.",err);
+      return null;
+    }
+  })();
+
+  function vincentyInverseM(pg1Deg,e1Deg,pg2Deg,e2Deg){
+    const a=JUPITER_A_M,b=JUPITER_C_M,f=JUPITER_F;
+    const p1=pg1Deg*Math.PI/180,p2=pg2Deg*Math.PI/180;
+    const L=wrap180(e2Deg-e1Deg)*Math.PI/180;
+    const U1=Math.atan((1-f)*Math.tan(p1));
+    const U2=Math.atan((1-f)*Math.tan(p2));
+    const sU1=Math.sin(U1),cU1=Math.cos(U1),sU2=Math.sin(U2),cU2=Math.cos(U2);
+    let lam=L, sinS=0, cosS=0, sigma=0, sinA=0, cos2A=0, cos2SM=0;
+    let ok=false;
+
+    for(let i=0;i<300;i++){
+      const sl=Math.sin(lam),cl=Math.cos(lam);
+      sinS=Math.sqrt((cU2*sl)**2+(cU1*sU2-sU1*cU2*cl)**2);
+      if(sinS===0) return 0;
+      cosS=sU1*sU2+cU1*cU2*cl;
+      sigma=Math.atan2(sinS,cosS);
+      sinA=cU1*cU2*sl/sinS;
+      cos2A=1-sinA*sinA;
+      cos2SM=cos2A===0 ? 0 : cosS-2*sU1*sU2/cos2A;
+      const C=f/16*cos2A*(4+f*(4-3*cos2A));
+      const next=L+(1-C)*f*sinA*(sigma+C*sinS*(cos2SM+C*cosS*(-1+2*cos2SM*cos2SM)));
+      if(Math.abs(next-lam)<1e-13){lam=next;ok=true;break;}
+      lam=next;
+    }
+    if(!ok) throw new Error("Η εφεδρική γεωδαιτική δεν συνέκλινε.");
+
+    const u2=cos2A*(a*a-b*b)/(b*b);
+    const A=1+u2/16384*(4096+u2*(-768+u2*(320-175*u2)));
+    const B=u2/1024*(256+u2*(-128+u2*(74-47*u2)));
+    const dSigma=B*sinS*(cos2SM+B/4*(cosS*(-1+2*cos2SM*cos2SM)-
+      B/6*cos2SM*(-3+4*sinS*sinS)*(-3+4*cos2SM*cos2SM)));
+    return b*A*(sigma-dSigma);
+  }
+
+  function geodesicDistanceM(pc1,w1,pc2,w2){
+    const pg1=planetocentricToPlanetographic(pc1);
+    const pg2=planetocentricToPlanetographic(pc2);
+    const e1=wrap180(-w1);
+    const e2=wrap180(-w2);
+
+    if(JUPITER_GEOD){
+      return JUPITER_GEOD.Inverse(pg1,e1,pg2,e2).s12;
+    }
+    return vincentyInverseM(pg1,e1,pg2,e2);
+  }
+
+  function distanceGFromEA(packet1,packet2){
+    const p1=decodeEA24(packet1.V24,packet1.H24);
+    const p2=decodeEA24(packet2.V24,packet2.H24);
+    const dM=geodesicDistanceM(p1.lat,p1.west,p2.lat,p2.west);
+    return {
+      distanceG:dM/METERS_PER_GD,
+      distanceM:dM,
+      point1:p1,
+      point2:p2
+    };
+  }
+
+  // ============================================================
+  // 6. POI — ΠΑΝΤΟΠΤΗΣ ΟΦΘΑΛΜΟΣ / ΟΜΦΑΛΟΣ ΔΙΑ
+  // ============================================================
+
+  const POIS={
+    omphalos:{
+      name:"ΠΑΝΤΌΠΤΗΣ ΟΦΘΑΛΜΟΣ / ΟΜΦΑΛΟΣ ΔΙΑ",
+      lat:PANTOPTIS_PC_LAT_DEG,
+      west:PANTOPTIS_W_DEG,
+      lon:0.0,
+      type:"omphalos"
+    }
+  };
+
+  // 24 πραγματικά σημεία ραδιοαπόκρυψης ΗΡΑ/Juno στο επίπεδο 100 mbar.
+  // lat = planetocentric, west = System III west longitude.
+  const JUNO_RO_100MBAR=[
+    {id:"53I",lat: 31.02,radiusKm:70176,west:122.37},
+    {id:"53E",lat: 21.89,radiusKm:70810,west:145.84},
+    {id:"54I",lat: 35.26,radiusKm:69846,west:178.60},
+    {id:"54E",lat: 16.62,radiusKm:71108,west:157.35},
+    {id:"60I",lat: 39.78,radiusKm:69482,west: 41.99},
+    {id:"60E",lat: 16.35,radiusKm:71121,west: 55.25},
+    {id:"61I",lat: 50.98,radiusKm:68587,west:120.22},
+    {id:"62I",lat: 56.71,radiusKm:68164,west:134.03},
+    {id:"62E",lat:-19.04,radiusKm:70981,west:154.84},
+    {id:"63I",lat: 62.68,radiusKm:67770,west:139.41},
+    {id:"64I",lat: 66.20,radiusKm:67564,west:134.66},
+    {id:"64E",lat:-43.32,radiusKm:69198,west:111.03},
+    {id:"65I",lat: 68.11,radiusKm:67463,west:351.04},
+    {id:"65E",lat:-49.12,radiusKm:68733,west:  7.25},
+    {id:"66I",lat: 68.22,radiusKm:67457,west: 29.16},
+    {id:"66E",lat:-48.70,radiusKm:68766,west: 55.60},
+    {id:"67I",lat: 66.44,radiusKm:67551,west: 75.01},
+    {id:"67E",lat:-41.76,radiusKm:69324,west: 99.50},
+    {id:"68I",lat: 63.79,radiusKm:67702,west: 63.29},
+    {id:"68E",lat:-31.76,radiusKm:70125,west:110.29},
+    {id:"69I",lat: 62.14,radiusKm:67803,west:149.95},
+    {id:"69E",lat:-25.17,radiusKm:70602,west:172.19},
+    {id:"70I",lat: 62.81,radiusKm:67762,west:176.86},
+    {id:"70E",lat:-26.17,radiusKm:70535,west:149.66}
+  ];
+
+  // Συνολικές δημοσιευμένες κλίμακες επαλήθευσης.
+  const EXTERNAL_RMSE=[
+    {
+      id:"juno_fit",
+      name:"ΗΡΑ/Juno — 24 σημεία, προσαρμοσμένη μέση απόκλιση",
+      errorKm:0.420,
+      expectedPct:0.000093505
+    },
+    {
+      id:"juno_less_fit",
+      name:"ΗΡΑ/Juno — λιγότερο προσαρμοσμένο μοντέλο",
+      errorKm:0.620,
+      expectedPct:0.000138032
+    },
+    {
+      id:"voyager_only",
+      name:"Voyager — RMS",
+      errorKm:2.200,
+      expectedPct:0.000489790
+    },
+    {
+      id:"voyager_pioneer",
+      name:"Voyager + Pioneer — RMS",
+      errorKm:5.600,
+      expectedPct:0.001246737
+    }
+  ];
+
+  // Οι έξι ιστορικές 1-bar ακτίνες είναι μετρήσεις ανά planetocentric latitude.
+  // Στο δημοσιευμένο shape table δεν απαιτείται μοναδικό System III longitude,
+  // άρα ΔΕΝ εφευρίσκουμε pin: εμφανίζονται ως γραμμές γεωγραφικού πλάτους.
+  const LEGACY_OCCULTATIONS_1BAR=[
+    {id:"v2_71s",mission:"Voyager 2",lat:-71.8,measuredRadiusKm:67245.85,expectedAbsResidualKm:9.967,expectedPct:0.002218970},
+    {id:"p10_60n",mission:"Pioneer 10",lat:60.3,measuredRadiusKm:67886.18,expectedAbsResidualKm:12.063,expectedPct:0.002685606},
+    {id:"p10_28n",mission:"Pioneer 10",lat:28.0,measuredRadiusKm:70367.34,expectedAbsResidualKm:13.682,expectedPct:0.003046047},
+    {id:"p11_19n",mission:"Pioneer 11",lat:19.8,measuredRadiusKm:70896.17,expectedAbsResidualKm:9.067,expectedPct:0.002018602},
+    {id:"v1_10s",mission:"Voyager 1",lat:-10.1,measuredRadiusKm:71330.92,expectedAbsResidualKm:0.520,expectedPct:0.000115768},
+    {id:"v1_eq",mission:"Voyager 1",lat:0.07,measuredRadiusKm:71490.79,expectedAbsResidualKm:2.798,expectedPct:0.000622923}
+  ];
+
+  function modelRadiusAtPlanetocentricLatKm(latDeg){
+    const t=latDeg*Math.PI/180;
+    const a=JUPITER_A_M/1000.0;
+    const c=JUPITER_C_M/1000.0;
+    return 1.0/Math.sqrt(
+      (Math.cos(t)*Math.cos(t))/(a*a) +
+      (Math.sin(t)*Math.sin(t))/(c*c)
+    );
+  }
+
+  function equatorialCircumferenceKm(){
+    return 2*Math.PI*(JUPITER_A_M/1000.0);
+  }
+
+  function pctOfEquatorialCircumference(errorKm){
+    return Math.abs(errorKm)/equatorialCircumferenceKm()*100.0;
+  }
+
+  for(const row of JUNO_RO_100MBAR){
+    const key=`juno_${row.id.toLowerCase()}`;
+    POIS[key]={
+      name:`ΗΡΑ/JUNO RO — PJ${row.id}`,
+      description:"Ραδιοαπόκρυψη ΗΡΑ/Juno στο επίπεδο 100 mbar.",
+      network:"Μέλος του δικτύου των 24 σημείων του shape fit.",
+      lat:row.lat,
+      west:row.west,
+      lon:wrap180(row.west-H_ORIGIN_W_DEG),
+      radiusKm:row.radiusKm,
+      type:"juno",
+      use:"Εξωτερικός φάρος επαλήθευσης· δεν ορίζει καμία παράμετρο EA/GΔ."
+    };
+  }
+
+  for(const poi of Object.values(POIS)){
+    poi.ea=coordToEA24(poi.lat,poi.west);
+  }
+
+  function legacyWitness(row){
+    const modelRadiusKm=modelRadiusAtPlanetocentricLatKm(row.lat);
+    const signedResidualKm=row.measuredRadiusKm-modelRadiusKm;
+    const absResidualKm=Math.abs(signedResidualKm);
+    return {
+      ...row,
+      modelRadiusKm,
+      signedResidualKm,
+      absResidualKm,
+      percent:pctOfEquatorialCircumference(row.expectedAbsResidualKm)
+    };
+  }
+
+  const LEGACY_WITNESSES=LEGACY_OCCULTATIONS_1BAR.map(legacyWitness);
+
+  function validateExternalBeaconsHard(){
+    const rows=[];
+    let pass=true;
+
+    const circ=equatorialCircumferenceKm();
+
+    if(JUNO_RO_100MBAR.length!==24){
+      pass=false;
+      rows.push({name:"ΗΡΑ/Juno count",pass:false,value:JUNO_RO_100MBAR.length,target:24});
+    }else{
+      rows.push({name:"ΗΡΑ/Juno count",pass:true,value:24,target:24});
+    }
+
+    const ids=new Set(JUNO_RO_100MBAR.map(x=>x.id));
+    const uniqueOk=ids.size===24;
+    pass=pass&&uniqueOk;
+    rows.push({name:"ΗΡΑ/Juno unique IDs",pass:uniqueOk,value:ids.size,target:24});
+
+    for(const r of EXTERNAL_RMSE){
+      const pct=r.errorKm/circ*100.0;
+      const ok=Math.abs(pct-r.expectedPct)<=5e-10;
+      pass=pass&&ok;
+      rows.push({
+        name:r.name,
+        pass:ok,
+        errorKm:r.errorKm,
+        percent:pct,
+        expectedPct:r.expectedPct
+      });
+    }
+
+    for(const r of LEGACY_WITNESSES){
+      // Τα expected residuals είναι κλειδωμένα στα 0,001 km όπως στο V1/V2 report.
+      const rounded=Math.round(r.absResidualKm*1000)/1000;
+      const residualOk=Math.abs(rounded-r.expectedAbsResidualKm)<=1e-12;
+      const pct=r.expectedAbsResidualKm/circ*100.0;
+      const pctOk=Math.abs(pct-r.expectedPct)<=5e-10;
+      const ok=residualOk&&pctOk;
+      pass=pass&&ok;
+      rows.push({
+        name:`${r.mission} ${r.lat}°`,
+        pass:ok,
+        measuredRadiusKm:r.measuredRadiusKm,
+        modelRadiusKm:r.modelRadiusKm,
+        signedResidualKm:r.signedResidualKm,
+        roundedAbsResidualKm:rounded,
+        percent:pct,
+        expectedPct:r.expectedPct
+      });
+    }
+
+    // EA24 round-trip check for every Juno point: no point may move materially.
+    let maxPcError=0;
+    let maxWestError=0;
+    for(const row of JUNO_RO_100MBAR){
+      const ea=coordToEA24(row.lat,row.west);
+      const back=decodeEA24(ea.V24,ea.H24);
+      maxPcError=Math.max(maxPcError,Math.abs(back.lat-row.lat));
+      maxWestError=Math.max(maxWestError,Math.abs(wrap180(back.west-row.west)));
+    }
+    const roundtripOk=maxPcError<1e-7 && maxWestError<1e-7;
+    pass=pass&&roundtripOk;
+    rows.push({
+      name:"ΗΡΑ/Juno 24-point EA24 round-trip",
+      pass:roundtripOk,
+      maxPcErrorDeg:maxPcError,
+      maxWestErrorDeg:maxWestError
+    });
+
+    return {pass,rows};
+  }
+
+  const EXTERNAL_BEACON_VALIDATION=validateExternalBeaconsHard();
+
+
+  // ============================================================
+  // 7. Σκληρός εσωτερικός έλεγχος του HTML
+  // ============================================================
+
+  function assertClose(name,a,b,tol){
+    if(!Number.isFinite(a) || Math.abs(a-b)>tol){
+      throw new Error(`${name}: ${a} != ${b}`);
+    }
+  }
+
+  assertClose("799 GΔ",QUARTER_MERIDIAN_M/METERS_PER_GD,799,1e-9);
+  assertClose("1598 GΔ",2*QUARTER_MERIDIAN_M/METERS_PER_GD,1598,1e-9);
+  assertClose("1 GΔ",METERS_PER_GD,136013.477992058,0.001);
+
+  const _omEA=coordToEA24(PANTOPTIS_PC_LAT_DEG,PANTOPTIS_W_DEG);
+  const _omBack=decodeEA24(_omEA.V24,_omEA.H24);
+  if(Math.abs(_omBack.lat-PANTOPTIS_PC_LAT_DEG)>1e-7 ||
+     Math.abs(wrap180(_omBack.west-PANTOPTIS_W_DEG))>1e-7){
+    throw new Error("Αποτυχία EA24 round-trip στον Παντόπτη.");
+  }
+
+  const _diasPc=(DIAS_SIMPLE_IONIAN/IONIAN_ALPHABET_TOTAL*180)*(400.5/400);
+  const _diasPg=planetocentricToPlanetographic(_diasPc);
+  const _diasW=normalizeWest(H_ORIGIN_W_DEG+(DIAS_NAME_VALUE%1260)/1260*360);
+  assertClose("ΔΙΑΣ pc",_diasPc,7.757432432432432,1e-12);
+  assertClose("ΔΙΑΣ pg",_diasPg,8.856702132,1e-8);
+  assertClose("ΔΙΑΣ W",_diasW,339.14285714285717,1e-10);
+  assertClose("Canonical offset",OMPHALOS_SOUTH_OFFSET_KM,0,1e-15);
+
+  if(!EXTERNAL_BEACON_VALIDATION.pass){
+    console.error("External beacon validation failed",EXTERNAL_BEACON_VALIDATION);
+    throw new Error("Αποτυχία validation των εξωτερικών φάρων.");
+  }
+
+  // Ανεξάρτητο αριθμητικό σημείο αναφοράς από Python GeographicLib
+  // για την canonical διαδρομή Παντόπτης -> ΔΙΑΣ.
+  const _validationDiasPc=
+    (DIAS_SIMPLE_IONIAN/IONIAN_ALPHABET_TOTAL*180)*(400.5/400);
+  const _validationDiasWest=
+    normalizeWest(H_ORIGIN_W_DEG+(DIAS_NAME_VALUE%1260)/1260*360);
+  const _validationPantoptisDiasKm=
+    geodesicDistanceM(
+      PANTOPTIS_PC_LAT_DEG,PANTOPTIS_W_DEG,
+      _validationDiasPc,_validationDiasWest
+    )/1000.0;
+
+  // GeographicLib/Karney: 104727.203950499 km.
+  // Vincenty fallback διαφέρει ~0.029 km, γι' αυτό το fallback gate είναι 0.05 km.
+  assertClose(
+    "ΠΑΝΤΟΠΤΗΣ -> ΔΙΑΣ geodesic",
+    _validationPantoptisDiasKm,
+    104727.203950499,
+    JUPITER_GEOD ? 1e-6 : 0.05
+  );
+
+  // ============================================================
+  // 8. Leaflet Δία CRS και χάρτης
+  // ============================================================
+
+  const JupiterProjection={
+    project:function(latlng){ return new L.Point(latlng.lng,latlng.lat); },
+    unproject:function(point){ return new L.LatLng(point.y,point.x); },
+    bounds:L.bounds(L.point(-180,-90),L.point(180,90))
+  };
+
+  const JupiterCRS=L.extend({},L.CRS,{
+    projection:JupiterProjection,
+    transformation:new L.Transformation(1/180,1,-1/180,0.5),
+    scale:function(zoom){ return 256*Math.pow(2,zoom); },
+    zoom:function(scale){ return Math.log(scale/256)/Math.LN2; },
+    infinite:false
+  });
+
+  const jupiterBounds=L.latLngBounds(
+    L.latLng(-90,-180),
+    L.latLng(90,180)
+  );
+
+  const map=L.map("map",{
+    crs:JupiterCRS,
+    minZoom:0,
+    maxZoom:5,
+    zoomControl:true,
+    attributionControl:false,
+    maxBounds:jupiterBounds,
+    maxBoundsViscosity:1.0,
+    preferCanvas:true
+  });
+  window.map=map;
+
+  L.tileLayer("dias_jupiter_map/tiles/{z}/{x}/{y}.webp",{
+    minZoom:0,maxZoom:5,tileSize:256,noWrap:true,
+    bounds:jupiterBounds,keepBuffer:2
+  }).addTo(map);
+
+  map.fitBounds(jupiterBounds,{animate:false});
+
+  function makePoiIcon(type){
+    if(type==="omphalos"){
+      return L.divIcon({
+        className:"",
+        html:'<div class="poi-omphalos"></div>',
+        iconSize:[22,22],
+        iconAnchor:[11,11]
+      });
+    }
+    if(type==="juno"){
+      return L.divIcon({
+        className:"",
+        html:'<div class="poi-dot poi-juno"></div>',
+        iconSize:[14,14],iconAnchor:[7,7]
+      });
+    }
+    return L.divIcon({
+      className:"",
+      html:'<div class="poi-dot poi-reflector"></div>',
+      iconSize:[18,18],iconAnchor:[9,9]
+    });
+  }
+
+  function westText(w){ return `${normalizeWest(w).toFixed(7)}°W`; }
+  function latText(lat){ return `${lat.toFixed(7)}° pc`; }
+
+  async function copyPlainText(text){
+    try{
+      if(navigator.clipboard && window.isSecureContext){
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    }catch(_err){}
+    try{
+      const ta=document.createElement("textarea");
+      ta.value=text; ta.setAttribute("readonly","");
+      ta.style.position="fixed"; ta.style.left="-9999px"; ta.style.top="-9999px";
+      document.body.appendChild(ta); ta.select();
+      const ok=document.execCommand("copy"); ta.remove(); return !!ok;
+    }catch(_err){ return false; }
+  }
+
+  // ΙΔΙΟ invariance με ARTEMIS:
+  // TAP = preview candidate only. COPY = commit στο ενεργό A/B.
+  let pendingPoint=null;
+
+  function slotGreek(slot){ return slot==="A" ? "Α" : "Β"; }
+
+  function pendingControlsHtml(){
+    return `
+      <div class="ea-tap-tools" style="justify-content:flex-end;margin-top:9px">
+        <button class="ea-tap-tool" type="button"
+          title="Κόπι στο ενεργό στίγμα"
+          onclick="acceptPendingPoint(this)">⧉</button>
+        <button class="ea-tap-tool" type="button"
+          title="Κάνσελ"
+          onclick="cancelPendingPoint()">×</button>
+      </div>`;
+  }
+
+  function genericCandidateHtml(point){
+    return `
+      <div class="ea-tap-popup">
+        <div class="ea-tap-head">
+          <div class="ea-tap-title">EA24</div>
+          <div style="font-size:11px;color:#70787b">→ ΣΤΙΓΜΑ <b>${slotGreek(activeSlot)}</b></div>
+        </div>
+        <div class="ea-tap-row">
+          <div class="ea-tap-key">V24</div><div class="ea-tap-code">${point.V24}</div>
+        </div>
+        <div class="ea-tap-row">
+          <div class="ea-tap-key">H24</div><div class="ea-tap-code">${point.H24}</div>
+        </div>
+        <div class="ea-tap-conventional">
+          ${point.lat.toFixed(7)}° pc · ${normalizeWest(point.west).toFixed(7)}°W System III
+        </div>
+        ${pendingControlsHtml()}
+      </div>`;
+  }
+
+  function poiCandidateHtml(key,poi){
+    if(poi.type==="omphalos"){
+      return `
+        <div class="ea-tap-popup">
+          <div class="popup-title">ΠΑΝΤΌΠΤΗΣ ΟΦΘΑΛΜΟΣ / ΟΜΦΑΛΟΣ ΔΙΑ</div>
+          <div class="popup-ea">
+            <b>V24:</b> ${poi.ea.V24}<br>
+            <b>H24:</b> ${poi.ea.H24}<br>
+            <b>pc:</b> ${latText(poi.lat)} · <b>System III:</b> ${westText(poi.west)}
+          </div>
+          <div style="margin-top:6px">Canonical PJ7 center · εφαρμοσμένη διόρθωση 0 km.</div>
+          <div style="margin-top:8px;font-size:11px;color:#70787b">
+            Κόπι → ΣΤΙΓΜΑ <b>${slotGreek(activeSlot)}</b>
+          </div>
+          ${pendingControlsHtml()}
+        </div>`;
+    }
+
+    if(poi.type==="juno"){
+      const jFit=EXTERNAL_RMSE[0];
+      const jLess=EXTERNAL_RMSE[1];
+      return `
+        <div class="ea-tap-popup">
+          <div class="popup-title">${poi.name}</div>
+          <div>${poi.description}</div>
+          <div>${poi.network}</div>
+          <div class="popup-ea">
+            <b>V24:</b> ${poi.ea.V24}<br>
+            <b>H24:</b> ${poi.ea.H24}<br>
+            <b>pc:</b> ${latText(poi.lat)} · <b>System III:</b> ${westText(poi.west)}<br>
+            <b>Ακτίνα 100 mbar:</b> ${poi.radiusKm.toFixed(0)} km
+          </div>
+          <div class="beacon-summary">
+            <span class="beacon-pass">24-point fit:</span>
+            ${jFit.errorKm.toFixed(3)} km =
+            ${pctOfEquatorialCircumference(jFit.errorKm).toFixed(9)}%<br>
+            <span class="beacon-pass">Λιγότερο προσαρμοσμένο:</span>
+            ${jLess.errorKm.toFixed(3)} km =
+            ${pctOfEquatorialCircumference(jLess.errorKm).toFixed(9)}%
+          </div>
+          <div style="margin-top:8px;font-size:11px;color:#70787b">
+            Κόπι → ΣΤΙΓΜΑ <b>${slotGreek(activeSlot)}</b>
+          </div>
+          ${pendingControlsHtml()}
+        </div>`;
+    }
+
+    return `
+      <div class="ea-tap-popup">
+        <div class="popup-title">${poi.name}</div>
+        <div class="popup-ea">
+          <b>V24:</b> ${poi.ea.V24}<br>
+          <b>H24:</b> ${poi.ea.H24}<br>
+          <b>pc:</b> ${latText(poi.lat)} · <b>System III:</b> ${westText(poi.west)}
+        </div>
+        ${pendingControlsHtml()}
+      </div>`;
+  }
+
+  function openPendingPoint(point,latlng,html){
+    pendingPoint={...point};
+    L.popup({
+      closeButton:false,autoPan:true,maxWidth:390,
+      className:"ea24-map-popup",offset:[0,-12]
+    }).setLatLng(latlng).setContent(html).openOn(map);
+  }
+
+  window.acceptPendingPoint=async function(button){
+    if(!pendingPoint) return;
+    const accepted={...pendingPoint};
+    const slot=activeSlot;
+    const clipboardText=`V24=${accepted.V24}\nH24=${accepted.H24}`;
+    const copied=await copyPlainText(clipboardText);
+    setPoint(slot,accepted);
+    pendingPoint=null;
+    if(button) button.textContent=copied ? "✓" : "⧉";
+    map.closePopup();
+  };
+
+  window.cancelPendingPoint=function(){
+    pendingPoint=null;
+    map.closePopup();
+  };
+
+  function openGenericCandidate(point){
+    openPendingPoint(point,L.latLng(point.lat,point.lon),genericCandidateHtml(point));
+  }
+
+  function openPoiCandidate(key){
+    const poi=POIS[key];
+    if(!poi || !poi.ea) return;
+    const point={
+      lat:poi.lat,lon:poi.lon,west:poi.west,
+      V24:poi.ea.V24,H24:poi.ea.H24,
+      poiKey:key,source:poi.name
+    };
+    openPendingPoint(point,L.latLng(poi.lat,poi.lon),poiCandidateHtml(key,poi));
+  }
+
+  const junoLayer=L.layerGroup().addTo(map);
+  const legacyLayer=L.layerGroup().addTo(map);
+
+  for(const [key,poi] of Object.entries(POIS)){
+    const marker=L.marker([poi.lat,poi.lon],{
+      icon:makePoiIcon(poi.type),
+      keyboard:true,title:poi.name,bubblingMouseEvents:false
+    });
+
+    if(poi.type==="juno"){
+      marker.addTo(junoLayer);
+    }else{
+      marker.addTo(map);
+    }
+
+    marker.on("click",()=>openPoiCandidate(key));
+  }
+
+  function legacyPopupHtml(row){
+    const absRounded=Math.round(row.absResidualKm*1000)/1000;
+    const voy=EXTERNAL_RMSE[2];
+    const voyPio=EXTERNAL_RMSE[3];
+    const sign=row.signedResidualKm>=0 ? "+" : "−";
+    return `
+      <div class="ea-tap-popup">
+        <div class="popup-title">${row.mission} — απόκρυψη ${Math.abs(row.lat).toFixed(2)}° ${row.lat<0?"S":"N"}</div>
+        <div>Φάρος σχήματος στο επίπεδο 1 bar. Το δημοσιευμένο table ορίζει πλάτος και ακτίνα, όχι μοναδικό System III μήκος.</div>
+        <div class="popup-ea">
+          <b>Planetocentric lat:</b> ${row.lat.toFixed(2)}°<br>
+          <b>Μετρημένη ακτίνα:</b> ${row.measuredRadiusKm.toFixed(2)} km<br>
+          <b>GΔ spheroid:</b> ${row.modelRadiusKm.toFixed(6)} km<br>
+          <b>Υπογεγραμμένη διαφορά:</b> ${sign}${Math.abs(row.signedResidualKm).toFixed(6)} km<br>
+          <b>|Απόκλιση|:</b> ${absRounded.toFixed(3)} km =
+          ${(row.expectedAbsResidualKm/equatorialCircumferenceKm()*100).toFixed(9)}%
+        </div>
+        <div class="beacon-summary">
+          Voyager RMS: ${voy.errorKm.toFixed(3)} km =
+          ${pctOfEquatorialCircumference(voy.errorKm).toFixed(9)}%<br>
+          Voyager + Pioneer RMS: ${voyPio.errorKm.toFixed(3)} km =
+          ${pctOfEquatorialCircumference(voyPio.errorKm).toFixed(9)}%
+        </div>
+      </div>`;
+  }
+
+  for(const row of LEGACY_WITNESSES){
+    const line=L.polyline(
+      [[row.lat,-180],[row.lat,180]],
+      {
+        color:"#f0a04b",
+        weight:1.5,
+        opacity:0.55,
+        dashArray:"5 6",
+        interactive:true
+      }
+    ).addTo(legacyLayer);
+
+    line.bindTooltip(
+      `${row.mission} · ${row.lat.toFixed(2)}° · |Δ| ${row.expectedAbsResidualKm.toFixed(3)} km`,
+      {sticky:true,direction:"top",opacity:0.92}
+    );
+    line.bindPopup(legacyPopupHtml(row),{
+      closeButton:true,autoPan:true,maxWidth:410,className:"ea24-map-popup"
+    });
+  }
+
+  L.control.layers(
+    null,
+    {
+      "ΗΡΑ/Juno · 24 RO φάροι":junoLayer,
+      "Voyager/Pioneer · 1-bar φάροι":legacyLayer
+    },
+    {collapsed:true,position:"topright"}
+  ).addTo(map);
+
+  map.on("popupclose",()=>{ pendingPoint=null; });
+
+  // ============================================================
+  // 9. Point selection UI — ίδιο με ARTEMIS
+  // ============================================================
+
+  let activeSlot="A";
+  let pointA=null,pointB=null,markerA=null,markerB=null,lastDistanceG=null;
+  let distanceLines=[],distanceLabel=null;
+
+  function setActiveSlot(slot){
+    activeSlot=slot;
+    document.getElementById("slotA").classList.toggle("active",slot==="A");
+    document.getElementById("slotB").classList.toggle("active",slot==="B");
+  }
+
+  function selectionIcon(slot){
+    return L.divIcon({
+      className:"",
+      html:`<div class="selection-marker">${slot}</div>`,
+      iconSize:[28,28],iconAnchor:[14,14]
+    });
+  }
+
+  function clearDistanceGeometry(){
+    for(const line of distanceLines) if(map.hasLayer(line)) map.removeLayer(line);
+    distanceLines=[];
+    if(distanceLabel && map.hasLayer(distanceLabel)) map.removeLayer(distanceLabel);
+    distanceLabel=null;
+  }
+
+  function visualLineParts(a,b){
+    const l1=a.lon;
+    let l2=b.lon;
+    const d=l2-l1;
+    if(Math.abs(d)<=180) return [[ [a.lat,l1],[b.lat,l2] ]];
+
+    if(d>180) l2-=360; else l2+=360;
+    const boundary=l2 < -180 ? -180 : 180;
+    const denom=l2-l1;
+    if(Math.abs(denom)<1e-15) return [[[a.lat,l1],[b.lat,b.lon]]];
+
+    const t=(boundary-l1)/denom;
+    const crossLat=a.lat+t*(b.lat-a.lat);
+    if(boundary===-180){
+      return [
+        [[a.lat,l1],[crossLat,-180]],
+        [[crossLat,180],[b.lat,b.lon]]
+      ];
+    }
+    return [
+      [[a.lat,l1],[crossLat,180]],
+      [[crossLat,-180],[b.lat,b.lon]]
+    ];
+  }
+
+  function sphericalMidpoint(a,b){
+    const p1=a.lat*Math.PI/180,l1=a.lon*Math.PI/180;
+    const p2=b.lat*Math.PI/180,l2=b.lon*Math.PI/180;
+    const x1=Math.cos(p1)*Math.cos(l1),y1=Math.cos(p1)*Math.sin(l1),z1=Math.sin(p1);
+    const x2=Math.cos(p2)*Math.cos(l2),y2=Math.cos(p2)*Math.sin(l2),z2=Math.sin(p2);
+    const x=x1+x2,y=y1+y2,z=z1+z2,n=Math.hypot(x,y,z);
+    if(n<1e-12) return {lat:(a.lat+b.lat)/2,lon:wrap180((a.lon+b.lon)/2)};
+    return {
+      lat:Math.atan2(z,Math.hypot(x,y))*180/Math.PI,
+      lon:wrap180(Math.atan2(y,x)*180/Math.PI)
+    };
+  }
+
+  const greekNumber=new Intl.NumberFormat("el-GR",{maximumFractionDigits:12});
+
+  function refreshDistanceGeometry(){
+    clearDistanceGeometry();
+    if(!pointA || !pointB) return;
+
+    const d=distanceGFromEA(pointA,pointB);
+    const text=`${greekNumber.format(d.distanceG)} GΔ`;
+
+    for(const latlngs of visualLineParts(pointA,pointB)){
+      distanceLines.push(
+        L.polyline(latlngs,{
+          className:"distance-line",color:"#f3f3f1",
+          weight:3,opacity:.92,interactive:false
+        }).addTo(map)
+      );
+    }
+
+    const mid=sphericalMidpoint(pointA,pointB);
+    distanceLabel=L.marker([mid.lat,mid.lon],{
+      interactive:false,keyboard:false,zIndexOffset:1200,
+      icon:L.divIcon({
+        className:"distance-label-icon",
+        html:`<div class="distance-badge">${text}</div>`,
+        iconSize:[1,1],iconAnchor:[0,0]
+      })
+    }).addTo(map);
+  }
+
+  function updatePointCard(slot,p){
+    const codes=document.getElementById(`codes${slot}`);
+    const source=document.getElementById(`source${slot}`);
+    if(!p){
+      codes.innerHTML="V24=…<br>H24=…"; source.textContent=""; return;
+    }
+    codes.innerHTML=`V24=${p.V24}<br>H24=${p.H24}`;
+    source.textContent=p.source || "";
+  }
+
+  function setPoint(slot,p){
+    if(slot==="A"){
+      pointA=p;
+      if(markerA) map.removeLayer(markerA);
+      markerA=L.marker([p.lat,p.lon],{icon:selectionIcon("Α"),zIndexOffset:1000}).addTo(map);
+      updatePointCard("A",p); setActiveSlot("B");
+    }else{
+      pointB=p;
+      if(markerB) map.removeLayer(markerB);
+      markerB=L.marker([p.lat,p.lon],{icon:selectionIcon("Β"),zIndexOffset:1000}).addTo(map);
+      updatePointCard("B",p); setActiveSlot("A");
+    }
+    clearResult();
+    refreshDistanceGeometry();
+  }
+
+  function clearPoint(slot){
+    if(slot==="A"){
+      pointA=null;
+      if(markerA){map.removeLayer(markerA);markerA=null;}
+      updatePointCard("A",null);setActiveSlot("A");
+    }else{
+      pointB=null;
+      if(markerB){map.removeLayer(markerB);markerB=null;}
+      updatePointCard("B",null);setActiveSlot("B");
+    }
+    clearResult();refreshDistanceGeometry();
+  }
+
+  function clearResult(){
+    lastDistanceG=null;
+    const result=document.getElementById("result");
+    const converterButton=document.getElementById("converterButton");
+    const converterResult=document.getElementById("converterResult");
+    const llrResult=document.getElementById("llrResult");
+    result.style.display="none";result.innerHTML="";
+    converterButton.style.display="none";
+    converterResult.style.display="none";converterResult.innerHTML="";
+    llrResult.style.display="none";llrResult.innerHTML="";
+  }
+
+  map.on("click",e=>{
+    try{
+      const lat=Math.max(-90,Math.min(90,e.latlng.lat));
+      const lon=wrap180(e.latlng.lng);
+      const west=normalizeWest(H_ORIGIN_W_DEG+lon);
+      const ea=coordToEA24(lat,west);
+      const p={
+        lat,lon,west,V24:ea.V24,H24:ea.H24,
+        poiKey:null,
+        source:`${lat.toFixed(7)}° pc, ${west.toFixed(7)}°W`
+      };
+      openGenericCandidate(p);
+    }catch(err){ alert(err.message || String(err)); }
+  });
+
+  map.on("zoomend",()=>{
+    document.getElementById("eaStatus").textContent=`EA · z${map.getZoom()}`;
+  });
+
+  document.getElementById("slotA").onclick=()=>{
+    if(pendingPoint) cancelPendingPoint();setActiveSlot("A");
+  };
+  document.getElementById("slotB").onclick=()=>{
+    if(pendingPoint) cancelPendingPoint();setActiveSlot("B");
+  };
+  document.getElementById("clearA").onclick=()=>{
+    if(pendingPoint) cancelPendingPoint();clearPoint("A");
+  };
+  document.getElementById("clearB").onclick=()=>{
+    if(pendingPoint) cancelPendingPoint();clearPoint("B");
+  };
+  document.getElementById("clearAll").onclick=()=>{
+    if(pendingPoint) cancelPendingPoint();
+    clearPoint("A");clearPoint("B");setActiveSlot("A");
+  };
+
+  // ============================================================
+  // 10. Απόσταση GΔ + μετατροπή σε μέτρα
+  // ============================================================
+
+  document.getElementById("distanceButton").onclick=()=>{
+    if(!pointA || !pointB){
+      alert("Χρειάζονται ΣΤΙΓΜΑ Α και ΣΤΙΓΜΑ Β.");
+      return;
+    }
+    try{
+      const d=distanceGFromEA(pointA,pointB);
+      lastDistanceG=d.distanceG;
+      refreshDistanceGeometry();
+
+      const result=document.getElementById("result");
+      result.innerHTML=
+        `<strong>Απόσταση Α - Β = ${greekNumber.format(d.distanceG)} GΔ</strong><br>`+
+        `<span style="color:#697174">Απόσταση από τον εσωτερικό ΔΙΑΣ GΔ-engine πάνω στο σφαιροειδές του Δία.</span>`;
+      result.style.display="block";
+      document.getElementById("converterButton").style.display="block";
+
+      const llr=document.getElementById("llrResult");
+      llr.style.display="none";llr.innerHTML="";
+    }catch(err){ alert(err.message || String(err)); }
+  };
+
+  document.getElementById("converterButton").onclick=()=>{
+    if(lastDistanceG===null) return;
+    const meters=lastDistanceG*METERS_PER_GD;
+    const out=document.getElementById("converterResult");
+    out.innerHTML=
+      `1 GΔ = ${greekNumber.format(METERS_PER_GD)} m<br>`+
+      `<b>Απόσταση σε μέτρα = ${greekNumber.format(meters)} m</b>`;
+    out.style.display="block";
+  };
+
+  // Expose the locked browser core for diagnostics.
+  window.DIAS_JUPITER_CORE={
+    CORE_ID,JUPITER_A_M,JUPITER_C_M,JUPITER_F,JUPITER_E2,
+    METERS_PER_GD,QUARTER_MERIDIAN_M,
+    H_ORIGIN_W_DEG,PANTOPTIS_PC_LAT_DEG,PANTOPTIS_W_DEG,
+    coordToEA24,decodeEA24,distanceGFromEA,
+    planetocentricToPlanetographic,planetographicToPlanetocentric,
+    JUNO_RO_100MBAR,LEGACY_WITNESSES,EXTERNAL_RMSE,
+    EXTERNAL_BEACON_VALIDATION
+  };
+
+  </script>
+</body>
+</html>
