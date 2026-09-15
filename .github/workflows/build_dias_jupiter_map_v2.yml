@@ -1,0 +1,409 @@
+name: Build DIAS Jupiter Global Map V2
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-map:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install map tools
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          pip install pillow numpy requests
+
+      - name: Download official Cassini global Jupiter map
+        shell: bash
+        run: |
+          mkdir -p jupiter_global_source
+
+          curl -L --fail --retry 5 --retry-delay 5 \
+            -o jupiter_global_source/PIA07782.jpg \
+            "https://pds-atmospheres.nmsu.edu/Jupiter/PIA07782.jpg"
+
+          ls -lh jupiter_global_source/PIA07782.jpg
+
+      - name: Build DIAS global 16K WebP pyramid
+        shell: bash
+        run: |
+          cat > /tmp/build_dias_jupiter_global_v2.py <<'PY'
+          from pathlib import Path
+          import json
+          import math
+          import shutil
+
+          import numpy as np
+          from PIL import Image, ImageDraw, ImageFont
+
+          SRC = Path("jupiter_global_source/PIA07782.jpg")
+          ROOT = Path("dias_jupiter_map")
+          TILES = ROOT / "tiles"
+
+          TILE = 256
+          MAX_Z = 5
+          QUALITY = 86
+
+          # ------------------------------------------------------------------
+          # DIAS canonical metric geometry v1
+          # ------------------------------------------------------------------
+          JUPITER_A_KM = 71488.0
+          JUPITER_C_KM = 66842.0
+          METERS_PER_GD = 136013.477992058
+
+          EQUATOR_TO_POLE_GD = 799.0
+          POLE_TO_POLE_GD = 1598.0
+
+          EQUATOR_V = 400.5
+          H_PERIOD = 1260.0
+
+          # Canonical Pantoptis / Omphalos v1.
+          H0_SYSTEM_III_W_DEG = 60.0
+          OMPHALOS_PG_LAT_DEG = -22.610918118371206
+          OMPHALOS_PC_LAT_DEG = -20.006972747
+          OMPHALOS_SOUTH_OFFSET_KM = 8.636510
+          OMPHALOS_EPOCH = "PJ7, 2017-07-11"
+
+          # ------------------------------------------------------------------
+          # Visual basemap metadata
+          # ------------------------------------------------------------------
+          BASEMAP_ID = "PIA07782"
+          BASEMAP_EPOCH = "Cassini, 2000-12-11/12"
+          BASEMAP_LATITUDE_TYPE = "planetocentric"
+          BASEMAP_LONGITUDE_DIRECTION = "positive west"
+          BASEMAP_LONGITUDE_SYSTEM = "System III"
+
+          # PIA07782 is 3601 x 1801 with endpoint duplication.
+          EXPECTED_W = 3601
+          EXPECTED_H = 1801
+
+          # Web map remains in the source-native physical coordinate convention:
+          # planetocentric latitude + System III west longitude.
+          # Metric distances are NOT taken from pixels; the DIAS metric core
+          # converts latitude as needed and works on the locked 1-bar spheroid.
+
+          if ROOT.exists():
+              shutil.rmtree(ROOT)
+          TILES.mkdir(parents=True, exist_ok=True)
+
+          img = Image.open(SRC).convert("RGB")
+
+          if img.size != (EXPECTED_W, EXPECTED_H):
+              raise RuntimeError(
+                  f"Unexpected PIA07782 dimensions: {img.size}; "
+                  f"expected {(EXPECTED_W, EXPECTED_H)}"
+              )
+
+          # The 3601 x 1801 product includes both longitude/latitude endpoints.
+          # Remove the duplicated final longitude column and final latitude row
+          # to obtain a clean periodic 3600 x 1800 2:1 raster.
+          img = img.crop((0, 0, 3600, 1800))
+
+          if img.size != (3600, 1800):
+              raise RuntimeError("Unexpected cropped source size.")
+
+          # PDS archive: equal increments of planetocentric latitude and
+          # System III west longitude over a complete 360-degree domain.
+          #
+          # For this reference image we use x=0 as 0 deg W and x increasing
+          # with west longitude. Therefore 60 deg W is at x=600 in 3600 px.
+          #
+          # Recenter so canonical H=0 = 60 deg W lies at map center.
+          native_w, native_h = img.size
+          px_per_deg = native_w / 360.0
+
+          source_x_h0 = H0_SYSTEM_III_W_DEG * px_per_deg
+          target_x_h0 = native_w / 2.0
+          native_roll_px = int(round(target_x_h0 - source_x_h0))
+
+          arr = np.asarray(img)
+          arr = np.roll(arr, native_roll_px, axis=1)
+          img.close()
+          img = Image.fromarray(arr, mode="RGB")
+
+          # Canonical web raster.
+          WEB_W = 16384
+          WEB_H = 8192
+          img = img.resize((WEB_W, WEB_H), Image.Resampling.LANCZOS)
+
+          # z5 = 64 x 32 tiles.
+          nx = WEB_W // TILE
+          ny = WEB_H // TILE
+
+          if (nx, ny) != (64, 32):
+              raise RuntimeError(f"Unexpected z5 matrix {(nx, ny)}")
+
+          z5 = TILES / str(MAX_Z)
+
+          for x in range(nx):
+              xdir = z5 / str(x)
+              xdir.mkdir(parents=True, exist_ok=True)
+
+              for y in range(ny):
+                  tile = img.crop(
+                      (x*TILE, y*TILE, (x+1)*TILE, (y+1)*TILE)
+                  )
+                  tile.save(
+                      xdir / f"{y}.webp",
+                      "WEBP",
+                      quality=QUALITY,
+                      method=6,
+                      optimize=True,
+                  )
+                  tile.close()
+
+          # Full clean preview from the canonical web raster.
+          preview_clean = img.resize((1024, 512), Image.Resampling.LANCZOS)
+          preview_clean.save(
+              ROOT / "preview_full_jupiter.webp",
+              "WEBP",
+              quality=92,
+              method=6,
+          )
+
+          # Separate annotated preview. This DOES NOT alter map tiles.
+          annotated = preview_clean.copy()
+          draw = ImageDraw.Draw(annotated)
+
+          # H=0 centre line.
+          cx = annotated.width // 2
+          draw.line((cx, 0, cx, annotated.height), fill=(255, 220, 80), width=2)
+
+          # Equator.
+          cy = annotated.height // 2
+          draw.line((0, cy, annotated.width, cy), fill=(245, 245, 245), width=1)
+
+          # Canonical Omphalos row in planetocentric map coordinates.
+          # top = +90, bottom = -90
+          oy = int(round(
+              (90.0 - OMPHALOS_PC_LAT_DEG) / 180.0 * annotated.height
+          ))
+          r = 6
+          draw.ellipse(
+              (cx-r, oy-r, cx+r, oy+r),
+              fill=(255, 70, 40),
+              outline=(255, 255, 255),
+              width=2,
+          )
+
+          annotated.save(
+              ROOT / "preview_annotated_jupiter.webp",
+              "WEBP",
+              quality=92,
+              method=6,
+          )
+
+          preview_clean.close()
+          annotated.close()
+          img.close()
+
+          # Lower zooms from child tiles only.
+          for z in range(MAX_Z - 1, -1, -1):
+              nx = 2 ** (z + 1)
+              ny = 2 ** z
+
+              for x in range(nx):
+                  xdir = TILES / str(z) / str(x)
+                  xdir.mkdir(parents=True, exist_ok=True)
+
+                  for y in range(ny):
+                      canvas = Image.new("RGB", (512, 512), (0, 0, 0))
+
+                      for dx in (0, 1):
+                          for dy in (0, 1):
+                              child = Image.open(
+                                  TILES / str(z + 1) /
+                                  str(2*x + dx) /
+                                  f"{2*y + dy}.webp"
+                              ).convert("RGB")
+                              canvas.paste(child, (dx*TILE, dy*TILE))
+                              child.close()
+
+                      parent = canvas.resize(
+                          (TILE, TILE),
+                          Image.Resampling.LANCZOS,
+                      )
+                      parent.save(
+                          xdir / f"{y}.webp",
+                          "WEBP",
+                          quality=QUALITY,
+                          method=6,
+                          optimize=True,
+                      )
+                      parent.close()
+                      canvas.close()
+
+          total = sum(1 for _ in TILES.rglob("*.webp"))
+          if total != 2730:
+              raise RuntimeError(f"Expected 2730 tiles, produced {total}")
+
+          e2 = 1.0 - (JUPITER_C_KM / JUPITER_A_KM) ** 2
+
+          manifest = {
+              "project": "DIAS",
+              "map_id": "DIAS_JUPITER_GLOBAL_V2",
+              "basemap": {
+                  "dataset": "Cassini PIA07782 - Cylindrical Global Map",
+                  "source_url":
+                      "https://pds-atmospheres.nmsu.edu/Jupiter/PIA07782.jpg",
+                  "mission": "Cassini",
+                  "instrument": "ISS Narrow Angle Camera",
+                  "epoch": BASEMAP_EPOCH,
+                  "source_native_pixels": [3601, 1801],
+                  "source_working_pixels_after_endpoint_crop": [3600, 1800],
+                  "latitude_type": BASEMAP_LATITUDE_TYPE,
+                  "longitude_system": BASEMAP_LONGITUDE_SYSTEM,
+                  "longitude_direction": BASEMAP_LONGITUDE_DIRECTION,
+                  "role":
+                      "Visual global basemap only. Atmospheric features "
+                      "belong to the Cassini 2000 epoch and must not be used "
+                      "as fixed coordinates for the 2017 Omphalos.",
+                  "credit":
+                      "NASA/JPL/Space Science Institute; PDS Atmospheres Node",
+              },
+              "dias_metric_reference": {
+                  "surface": "Juno-2026 physical 1-bar central estimate",
+                  "a_km": JUPITER_A_KM,
+                  "c_km": JUPITER_C_KM,
+                  "e2": e2,
+                  "equator_to_pole_GD": EQUATOR_TO_POLE_GD,
+                  "pole_to_pole_GD": POLE_TO_POLE_GD,
+                  "meters_per_GD": METERS_PER_GD,
+                  "metric_rule":
+                      "Distances are computed on the locked 1-bar spheroid, "
+                      "never from flat-map pixels.",
+              },
+              "ea": {
+                  "equator_V": EQUATOR_V,
+                  "horizontal_period": H_PERIOD,
+                  "H0_system_III_w_deg": H0_SYSTEM_III_W_DEG,
+              },
+              "canonical_omphalos": {
+                  "name": "Pantoptis Ophthalmos / Great Red Spot",
+                  "epoch": OMPHALOS_EPOCH,
+                  "system_III_w_deg": H0_SYSTEM_III_W_DEG,
+                  "planetocentric_lat_deg": OMPHALOS_PC_LAT_DEG,
+                  "planetographic_lat_deg": OMPHALOS_PG_LAT_DEG,
+                  "south_offset_from_nominal_PJ7_center_km":
+                      OMPHALOS_SOUTH_OFFSET_KM,
+                  "note":
+                      "Canonical DIAS v1 anchor. Independent of the "
+                      "Cassini-2000 visual location of the Great Red Spot.",
+              },
+              "web_map": {
+                  "projection": "Simple Cylindrical / equirectangular",
+                  "latitude_type": "planetocentric",
+                  "longitude_system": "System III",
+                  "longitude_direction": "positive west",
+                  "centre_system_III_w_deg": H0_SYSTEM_III_W_DEG,
+                  "centre_is_H0": True,
+                  "relative_longitude_domain_deg": [-180, 180],
+                  "latitude_domain_deg": [-90, 90],
+                  "web_pixels": [WEB_W, WEB_H],
+                  "tile_size": TILE,
+                  "zoom_min": 0,
+                  "zoom_max": MAX_Z,
+                  "zoom_0_matrix": [2, 1],
+                  "zoom_5_matrix": [64, 32],
+                  "total_tiles": total,
+                  "webp_quality": QUALITY,
+                  "native_roll_pixels": native_roll_px,
+              },
+              "validation": {
+                  "expected_source_dimensions": [3601, 1801],
+                  "expected_total_tiles": 2730,
+                  "H0_recenter_rule":
+                      "60 deg W System III moved to horizontal map centre.",
+                  "status":
+                      "Hard build validation passes only if dimensions and "
+                      "tile count match exactly.",
+              },
+          }
+
+          anchors = {
+              "canonical_omphalos": manifest["canonical_omphalos"],
+              "equator_H0": {
+                  "planetocentric_lat_deg": 0.0,
+                  "system_III_w_deg": H0_SYSTEM_III_W_DEG,
+                  "V": EQUATOR_V,
+                  "H": 0.0,
+              },
+              "north_pole_H0": {
+                  "planetocentric_lat_deg": 90.0,
+                  "system_III_w_deg": H0_SYSTEM_III_W_DEG,
+              },
+              "south_pole_H0": {
+                  "planetocentric_lat_deg": -90.0,
+                  "system_III_w_deg": H0_SYSTEM_III_W_DEG,
+              },
+          }
+
+          (ROOT / "manifest.json").write_text(
+              json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+              encoding="utf-8",
+          )
+
+          (ROOT / "anchors.json").write_text(
+              json.dumps(anchors, ensure_ascii=False, indent=2) + "\n",
+              encoding="utf-8",
+          )
+
+          print("SOURCE:", SRC)
+          print("NATIVE ROLL PX:", native_roll_px)
+          print("TOTAL TILES:", total)
+          print(json.dumps(manifest, ensure_ascii=False, indent=2))
+          PY
+
+          python /tmp/build_dias_jupiter_global_v2.py
+
+      - name: Verify DIAS Jupiter global map
+        shell: bash
+        run: |
+          echo "Tile count:"
+          TILE_COUNT="$(find dias_jupiter_map/tiles -type f -name '*.webp' | wc -l)"
+          echo "$TILE_COUNT"
+
+          test "$TILE_COUNT" -eq 2730
+
+          echo "Map size:"
+          du -sh dias_jupiter_map
+
+          echo "Clean preview:"
+          ls -lh dias_jupiter_map/preview_full_jupiter.webp
+
+          echo "Annotated preview:"
+          ls -lh dias_jupiter_map/preview_annotated_jupiter.webp
+
+          echo "Manifest:"
+          cat dias_jupiter_map/manifest.json
+
+          echo "Anchors:"
+          cat dias_jupiter_map/anchors.json
+
+      - name: Commit DIAS Jupiter global map V2
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add -A dias_jupiter_map
+
+          git commit -m "Build DIAS Jupiter global map V2" || {
+            echo "No changes to commit."
+            exit 0
+          }
+
+          git push origin HEAD:${{ github.ref_name }}
