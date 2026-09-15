@@ -1,19 +1,25 @@
 {
   "project": "DIAS",
-  "map_id": "DIAS_JUPITER_PJ7_GMI_V1",
-  "dataset": "NASA/JPL PDS JunoCam PJ7 Global Map Image",
-  "source_product_label_url": "https://planetarydata.jpl.nasa.gov/img/data/juno/JNOJNC_0014/DATA/GLOBAL_MAPS/JNCR_2017192_07P00000_V02.LBL",
-  "source_product_image_url": "https://planetarydata.jpl.nasa.gov/img/data/juno/JNOJNC_0014/DATA/GLOBAL_MAPS/JNCR_2017192_07P00000_V02.IMG",
-  "source_volume": "JNOJNC_0014/",
-  "source_projection": "SIMPLE CYLINDRICAL",
-  "source_latitude_type": "planetographic",
-  "source_longitude_direction": "west",
-  "source_center_longitude_deg": 0.0,
-  "source_pixels_per_degree": 16.0,
-  "source_reference_axes_km": {
-    "a": 71492.0,
-    "c": 66854.0,
-    "note": "PDS JunoCam cartographic source axes; visual basemap only."
+  "map_id": "DIAS_JUPITER_GLOBAL_V2",
+  "basemap": {
+    "dataset": "Cassini PIA07782 - Cylindrical Global Map",
+    "source_url": "https://pds-atmospheres.nmsu.edu/Jupiter/PIA07782.jpg",
+    "mission": "Cassini",
+    "instrument": "ISS Narrow Angle Camera",
+    "epoch": "Cassini, 2000-12-11/12",
+    "source_native_pixels": [
+      3601,
+      1801
+    ],
+    "source_working_pixels_after_endpoint_crop": [
+      3600,
+      1800
+    ],
+    "latitude_type": "planetocentric",
+    "longitude_system": "System III",
+    "longitude_direction": "positive west",
+    "role": "Visual global basemap only. Atmospheric features belong to the Cassini 2000 epoch and must not be used as fixed coordinates for the 2017 Omphalos.",
+    "credit": "NASA/JPL/Space Science Institute; PDS Atmospheres Node"
   },
   "dias_metric_reference": {
     "surface": "Juno-2026 physical 1-bar central estimate",
@@ -22,7 +28,8 @@
     "e2": 0.12575616596839234,
     "equator_to_pole_GD": 799.0,
     "pole_to_pole_GD": 1598.0,
-    "meters_per_GD": 136013.477992058
+    "meters_per_GD": 136013.477992058,
+    "metric_rule": "Distances are computed on the locked 1-bar spheroid, never from flat-map pixels."
   },
   "ea": {
     "equator_V": 400.5,
@@ -33,13 +40,15 @@
     "name": "Pantoptis Ophthalmos / Great Red Spot",
     "epoch": "PJ7, 2017-07-11",
     "system_III_w_deg": 60.0,
-    "planetographic_lat_deg": -22.610918118371206,
     "planetocentric_lat_deg": -20.006972747,
-    "south_offset_from_nominal_PJ7_center_km": 8.63651
+    "planetographic_lat_deg": -22.610918118371206,
+    "south_offset_from_nominal_PJ7_center_km": 8.63651,
+    "note": "Canonical DIAS v1 anchor. Independent of the Cassini-2000 visual location of the Great Red Spot."
   },
   "web_map": {
     "projection": "Simple Cylindrical / equirectangular",
-    "latitude_type": "planetographic",
+    "latitude_type": "planetocentric",
+    "longitude_system": "System III",
     "longitude_direction": "positive west",
     "centre_system_III_w_deg": 60.0,
     "centre_is_H0": true,
@@ -68,8 +77,15 @@
     ],
     "total_tiles": 2730,
     "webp_quality": 86,
-    "source_roll_pixels": -960
+    "native_roll_pixels": 1200
   },
-  "metric_note": "The raster is a visual/cartographic basemap. All DIAS distances in GΔ must be computed on the locked Juno-2026 1-bar spheroid, not in flat-map pixels.",
-  "credit": "NASA/JPL-Caltech/SwRI/MSSS; Planetary Data System; DIAS map tiling workflow."
+  "validation": {
+    "expected_source_dimensions": [
+      3601,
+      1801
+    ],
+    "expected_total_tiles": 2730,
+    "H0_recenter_rule": "60 deg W System III moved to horizontal map centre.",
+    "status": "Hard build validation passes only if dimensions and tile count match exactly."
+  }
 }

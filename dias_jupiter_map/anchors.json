@@ -3,22 +3,23 @@
     "name": "Pantoptis Ophthalmos / Great Red Spot",
     "epoch": "PJ7, 2017-07-11",
     "system_III_w_deg": 60.0,
-    "planetographic_lat_deg": -22.610918118371206,
     "planetocentric_lat_deg": -20.006972747,
-    "south_offset_from_nominal_PJ7_center_km": 8.63651
-  },
-  "north_pole": {
-    "planetographic_lat_deg": 90.0,
-    "system_III_w_deg": 60.0
-  },
-  "south_pole": {
-    "planetographic_lat_deg": -90.0,
-    "system_III_w_deg": 60.0
+    "planetographic_lat_deg": -22.610918118371206,
+    "south_offset_from_nominal_PJ7_center_km": 8.63651,
+    "note": "Canonical DIAS v1 anchor. Independent of the Cassini-2000 visual location of the Great Red Spot."
   },
   "equator_H0": {
-    "planetographic_lat_deg": 0.0,
+    "planetocentric_lat_deg": 0.0,
     "system_III_w_deg": 60.0,
     "V": 400.5,
     "H": 0.0
+  },
+  "north_pole_H0": {
+    "planetocentric_lat_deg": 90.0,
+    "system_III_w_deg": 60.0
+  },
+  "south_pole_H0": {
+    "planetocentric_lat_deg": -90.0,
+    "system_III_w_deg": 60.0
   }
 }
